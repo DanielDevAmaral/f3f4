@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Scurity-Policy" content="script-src 'self'" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <title>Formulário de Operações</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <img src=".\images\logo.png" alt="Logo" class="logo">
+        </header>
+        <main>
+            <form id="operationForm">
+                <div class="form-group">
+                    <label>Selecione a Operação:</label>
+                    <label for="optionF3">
+                        <input type="radio" id="optionF3" name="operation" value="F3" required> F3
+                    </label>
+                    <label for="optionF4">
+                        <input type="radio" id="optionF4" name="operation" value="F4" required> F4
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label for="fileUpload">Carregar Arquivo (.xlsx):</label>
+                    <input type="file" id="fileUpload" name="fileUpload" accept=".xlsx" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="sequenciaNR">Sequência NR:</label>
+                    <input type="text" id="sequenciaNR" name="sequenciaNR" placeholder="Digite a sequência NR" required>
+                </div>
+
+                <button type="submit">Iniciar Processo</button>
+            </form>
+        </main>
+    </div>
+
+    <script src="./js//script.js"></script>
+    <script src="/socket.io/socket.io.js"></script> <!-- Biblioteca socket.io no front-end -->
+    <script>
+        const socket = io('http://localhost:3000'); // Conecta-se ao socket.io no servidor
+
+        socket.on('message', (message) => {
+            // Exibe a mensagem com Toastify
+            sucessoNotification(message);
+        });
+    </script>
+</body>
+</html>

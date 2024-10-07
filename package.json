@@ -3,19 +3,21 @@
   "version": "1.0.0",
   "description": "",
   "main": "main.js",
+  "productName": "Automação do F3 e F4",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "electron ."
+    "start": "electron .",
+    "build": "electron-builder build"
   },
   "puppeteer": {
-  "default_browser_revision": "1144110"
+    "default_browser_revision": "1144110"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2", 
     "ejs": "^3.1.10",
+    "electron-log": "^5.2.0",
+    "express": "^4.18.2",
     "express-fileupload": "^1.5.1",
     "odf": "^2.3.2",
     "puppeteer": "^23.1.0",
@@ -25,6 +27,25 @@
   },
   "devDependencies": {
     "electron": "^32.1.2",
-    "electron-packager": "^17.1.2"
+    "electron-builder": "^25.0.5"
+  },
+  "build": {
+    "appId": "tasy-glosas",
+    "copyright": "Copyright 2023",
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "targets": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ]
   }
 }

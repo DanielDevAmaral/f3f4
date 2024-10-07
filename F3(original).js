@@ -1,20 +1,9 @@
 const puppeteer = require('puppeteer');
+const fs = require('fs');
+const xlsx = require('xlsx');
 
-// Obtém os argumentos passados para o script Node.js
-const args = process.argv.slice(2);
+module.exports = async (page, convenio, nrTitulo, seguenciaNF, estabelecimento, linha) => {
 
-// Certifique-se de que os argumentos estão sendo recebidos corretamente
-console.log("Argumentos recebidos: ", args);
-
-// Espera-se que os argumentos estejam na seguinte ordem:
-// [convenio, nrTitulo, sequenciaNF, estabelecimento, index, retorno, glosa]
-const [convenio, nrTitulo, sequenciaNF, estabelecimento, index, retorno, glosa] = args;
-
-(async () => {
-    // Iniciar o navegador do Puppeteer
-    const browser = await puppeteer.launch({ headless: false, defaultViewport: null }); // Não rodar em modo headless para visualização
-    const page = await browser.newPage();
-    
     async function elementoExiste(selector) {
         try {
             await page.waitForSelector(selector);
@@ -65,7 +54,6 @@ const [convenio, nrTitulo, sequenciaNF, estabelecimento, index, retorno, glosa] 
             console.log('Popup não encontrado ou não existia...');
         }
     
-        // Alterar o estabelecimento, se necessário
         if (estabelecimento.trim() !== "Hospital Primavera Assist. Medica Hospitalar Ltda") {
             console.log('Alterando o estabelecimento...');
             await page.waitForSelector('div.w-header-avatar');
@@ -76,7 +64,7 @@ const [convenio, nrTitulo, sequenciaNF, estabelecimento, index, retorno, glosa] 
             await page.click('#userData-dropdown-options > ul > li:nth-child(1)');
             await delay(3000);
     
-            if (await elementoExiste('#detail_3_container > div:nth-child(2) > div > div.w-attr-container__content > tasy-listbox > div')) {
+            if (elementoExiste('#detail_3_container > div:nth-child(2) > div > div.w-attr-container__content > tasy-listbox > div')) {
                 const listbox = await page.$$('xpath/.//tasy-listbox[contains(@class, "ng-scope ng-isolate-scope")]');
                 await listbox[1].click();
             } else {
@@ -86,6 +74,10 @@ const [convenio, nrTitulo, sequenciaNF, estabelecimento, index, retorno, glosa] 
     
             await delay(3000);
             const items = await page.$$('xpath/.//span[contains(@class, "ng-binding ng-scope")]');
+    
+            if (estabelecimento == 'Rede Primavera - Diagnose Barão de Maruim') {
+                estabelecimento = 'Rede Primavera - Diagnose Barão de Maruim';
+            }
     
             for (const item of items) {
                 const text = await item.evaluate(node => node.textContent.trim());
@@ -126,7 +118,7 @@ const [convenio, nrTitulo, sequenciaNF, estabelecimento, index, retorno, glosa] 
         await delay(3000);
     
         // Manipular pop-up
-        if (await elementoExiste('#ngdialog4 > div.ngdialog-content > div.dialog-box.wdialogbox-container.dialog-warning > div:nth-child(3) > div > button.dialog_ok_button.btn-blue')) {
+        if (elementoExiste('#ngdialog4 > div.ngdialog-content > div.dialog-box.wdialogbox-container.dialog-warning > div:nth-child(3) > div > button.dialog_ok_button.btn-blue')) {
             const button = await page.$('xpath/.//button[contains(@class, "dialog_ok_button btn-blue")]');
             await button.click();
         } else {
@@ -169,6 +161,11 @@ const [convenio, nrTitulo, sequenciaNF, estabelecimento, index, retorno, glosa] 
             const inputElement = await page.$('xpath/.//input[contains(@class, "gwt-TextBox ng-valid ng-valid-required ng-pristine ng-untouched")]');
             await inputElement.click();
             await inputElement.type(String(nrTitulo));
+        } else {
+            console.log(`Tentando preencher número de título: ${nrTitulo} na segunda tentativa...`);
+            const inputElement = await page.$('xpath/.//input[contains(@class, "gwt-TextBox ng-valid ng-valid-required ng-pristine ng-untouched")]');
+            await inputElement.click();
+            await inputElement.type(String(nrTitulo));
         }
         await delay(3000);
     
@@ -177,22 +174,64 @@ const [convenio, nrTitulo, sequenciaNF, estabelecimento, index, retorno, glosa] 
         await page.click('button.btn-green.wfilter-button.ng-binding');
         await delay(3000);
     
-        // Clicar na primeira linha da tabela com a sequencia correta
-        const elements = await page.$$('xpath/.//div[contains(@class, "slick-cell l0 r0 right-aligned active selected")]/div/span');
-        for (const el of elements) {
-            const text = await el.evaluate(node => node.textContent);
-            if (text.includes(sequenciaNF)) {
-                await el.click();
+        // Clicar na primeira linha da tabela
+        await page.click('#datagrid > div.slick-pane.slick-pane-top.slick-pane-right > div.slick-viewport.slick-viewport-top.slick-viewport-right > div > div');
+        await delay(3000);
+    
+        // Clicar Alt + V
+        console.log('Executando comando Alt + V...');
+        await page.keyboard.down('Alt');
+        await page.keyboard.press('V');
+        await page.keyboard.up('Alt');
+        await delay(3000);
+    
+        // Iterar para encontrar a sequência NF desejada
+        console.log(`Procurando sequência NF: ${seguenciaNF}...`);
+        const elements = await page.$$('xpath/.//div[contains(@class, "datagrid-cell-content-wrapper") and @style="line-height: 28px; "]/span');
+    
+        for (let i = 0; i < elements.length; i++) {
+            const cellText = await elements[i].evaluate(el => el.textContent.trim());
+    
+            if (cellText.includes(seguenciaNF)) {
+                console.log(`Encontrada sequência NF: ${cellText}`);
+                await elements[i].click();
                 break;
             }
         }
     
-        console.log('Processo finalizado com sucesso.');
-        statusprocess = "Finalizado";
-    } catch (err) {
-        console.log('Erro durante o processo:', err);
-        statusprocess = "Erro";
+        // Conclusão
+        statusprocess = 'Finalizado com sucesso';
+        console.log('Processo concluído com sucesso.');
+    } catch (e) {
+        statusprocess = 'Erro';
+        console.error(`Erro ao performar F3, verificar a linha: ${linha} no arquivo excel`);
     } finally {
-        await browser.close();
+        // Função para salvar dados em uma planilha
+        salvarDadosPlanilha(convenio, nrTitulo, statusprocess);
     }
-})();
+};
+
+function salvarDadosPlanilha(convenio, nrTitulo, statusprocess) {
+    const filePath = './resultado_processamentoF3.xlsx';
+    let workbook;
+    let worksheet;
+
+    // Verifica se o arquivo já existe
+    if (fs.existsSync(filePath)) {
+        workbook = xlsx.readFile(filePath);
+        worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    } else {
+        workbook = xlsx.utils.book_new();
+        const headers = [{ convenio: "Convênio", nrTitulo: "Número do Título", statusprocess: "Status" }];
+        worksheet = xlsx.utils.json_to_sheet(headers);
+        xlsx.utils.book_append_sheet(workbook, worksheet, 'Resultados');
+    }
+
+    // Adiciona os novos dados
+    const newData = [{ convenio, nrTitulo, statusprocess }];
+    xlsx.utils.sheet_add_json(worksheet, newData, { origin: -1, skipHeader: true });
+
+    // Salva a planilha
+    xlsx.writeFile(workbook, filePath);
+    console.log('Dados salvos na planilha.');
+}
